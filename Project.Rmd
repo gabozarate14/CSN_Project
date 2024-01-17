@@ -266,6 +266,7 @@ SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  p0, max_st
 }
 ```
 
+
 ```{r}
 vaccination_strategy <- "degree"
 
@@ -397,3 +398,122 @@ Cambiar el nombre de la funcion sis_vac que calcula el expected en vez del propo
 Cambiar que los plots se impriman aqui en vez de en un fichero.
 
 Hacer plots del paper.
+
+
+SIS with vaccination strategy (using S):
+
+```{r}
+random_walk_infection <- function(G, start_node, L, statuses, S) {
+    current_node <- start_node
+    for (i in 1:L) {
+        # Move to a random neighbor
+        neighbors <- neighbors(G, current_node)
+        if (length(neighbors) > 0) {
+            current_node <- sample(neighbors, 1)
+        }
+
+        # Mark the current node as infected if it is not in S
+        if (!current_node %in% S) {
+            statuses[current_node] <- 1
+        }
+    }
+    return(statuses)
+}
+
+simulate_crawlers <- function(G, S, L) {
+    statuses <- rep(0, vcount(G))  # Initialize statuses to 0
+    for (node in S) {
+        statuses <- random_walk_infection(G, node, L, statuses, S)
+    }
+    return(statuses)
+}
+
+# Function to select set S from graph G
+select_nodes <- function(G, S_size, case_type) {
+  if (case_type == "case1") {
+    # Random selection
+    S <- sample(V(G), S_size)
+  } else if (case_type == "case2") {
+    # Targeted selection based on a criterion, e.g., highest degree
+    degree_nodes <- order(-degree(G))
+    S <- V(G)[degree_nodes[1:S_size]]
+  }
+  return(S)
+}
+```
+
+
+```{r}
+# Extended SIS simulation function with vaccination strategy
+SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  L = 10, S_size = 10, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1") {
+  
+  #Output initialization
+  prop_infected <- numeric(max_steps)
+  num_infected <- numeric(max_steps)
+  
+  # Choose S depending on the case being analyzed
+  S <- select_nodes(G, S_size, case_type)
+  statuses <- numeric(vcount(G))
+  
+  # Infect the nodes
+  for (node in S) {
+        statuses <- random_walk_infection(G, node, L, statuses, S)
+    }
+
+  
+  # Vacination
+  if(vaccination_strategy == "greedy"){
+     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
+    
+  } else {
+    # Calculate vaccination scores based on the chosen strategy
+    vaccination_scores <- switch(
+      vaccination_strategy,
+      "degree" = degree(G),
+      "pagerank" = calculate_pagerank(G),
+      "P_pagerank" = calculate_P_pagerank(G, p = 0.15),  # You can adjust the preference parameter
+      "eigenvector" = calculate_eigenvector_centrality(G),
+      "betweenness" = calculate_betweenness_centrality(G),
+      "random" = runif(vcount(G)),  # Random vaccination
+      "greedy" = greedy_algorithm(G, b = 0.1 * vcount(G))
+    )
+  
+    # Sort nodes by vaccination score in descending order
+    sorted_nodes <- order(-vaccination_scores)
+  
+    # Select a fraction of nodes for vaccination
+    vaccinated_nodes <- sorted_nodes[1:round(0.1 * vcount(G))]
+  }
+
+  # Apply vaccination
+  statuses[vaccinated_nodes] <- 0
+
+  for (step in 1:max_steps) {
+    for (node in 1:vcount(G)) {
+      if (statuses[node] == 1) {
+        neighbors <- neighbors(G, node)
+        for (neighbor in neighbors) {
+          # Get infected after contact (neighbors)
+          if (statuses[neighbor] == 0 && runif(1) < beta) {
+            statuses[neighbor] <- 1
+          }
+        }
+        # Get recovered
+        if (statuses[node] == 1 && runif(1) < gamma) {
+          statuses[node] <- 0
+        }
+      }
+    }
+    
+    num_infected[step] <- sum(statuses)
+    prop_infected[step] <- sum(statuses) / vcount(G)
+  }
+  
+  return(list(num_infected = num_infected, prop_infected = prop_infected[1:step]))
+}
+```
+
+
+
+
+
