@@ -40,7 +40,6 @@ HEP_TH <- simplify(G, remove.multiple = TRUE, remove.loops = TRUE)
 
 #Facebook
 ```{r}
-
 edge_list <- read.csv("data/musae_facebook_edges.csv", sep=",", header=FALSE, skip=1, col.names=c("FromNodeId", "ToNodeId"))
 G <- graph_from_data_frame(edge_list, directed=TRUE, vertices=NULL)
 # Remove self-loops and multiple edges
@@ -135,13 +134,13 @@ SIS + vaccination strategy:
 #Greedy strategy
 ```{r}
 # Function to perform the greedy algorithm
-greedy_algorithm <- function(G, b = round(0.1 * vcount(G))) {
+greedy_algorithm <- function(G, b = round(0.1 * vcount(G)), max_walk_length = 10) {
   
   # Nested function for Monte Carlo simulation
-  monte_carlo_simulation <- function(node, G, num_simulations) {
+  monte_carlo_simulation <- function(node, G, max_walk_length, num_simulations) {
     trap_count <- 0
     for (i in 1:num_simulations) {
-      walk_length <- sample(1:10, 1) # Example: Random walk length between 1 and 10
+      walk_length <- sample(1:max_walk_length, 1)
       end_node <- simulate_random_walk(node, G, walk_length)
       if (end_node == node) trap_count <- trap_count + 1
     }
@@ -165,7 +164,7 @@ greedy_algorithm <- function(G, b = round(0.1 * vcount(G))) {
   # Compute benefits for each node
   for (node in V(G)) {
     print(node)
-    node_benefits[node] <- monte_carlo_simulation(node, G, num_simulations = 100) #Set parameters
+    node_benefits[node] <- monte_carlo_simulation(node, G, max_walk_length, num_simulations = 100) #Set parameters
   }
   
   # Sort nodes by their benefits and select the top b nodes
