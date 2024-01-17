@@ -256,4 +256,27 @@ for (strategy in vaccination_strategies) {
 ```
 
 
+# Load real graphs
+
+GR-QC
+
+```{r}
+edge_list <- read.csv("data/CA-GrQc.txt", sep="\t", header=FALSE, skip=4, col.names=c("FromNodeId", "ToNodeId"))
+G <- graph_from_data_frame(edge_list, directed=TRUE, vertices=NULL)
+# Remove self-loops and multiple edges
+G <- simplify(G, remove.multiple = TRUE, remove.loops = TRUE)
+```
+
+HEP-TH
+
+```{r}
+edge_list <- read.csv("data/CA-HepTh.txt", sep="\t", header=FALSE, skip=4, col.names=c("FromNodeId", "ToNodeId"))
+G <- graph_from_data_frame(edge_list, directed=TRUE, vertices=NULL)
+# Remove self-loops and multiple edges
+G <- simplify(G, remove.multiple = TRUE, remove.loops = TRUE)
+```
+
+
+
+
 
