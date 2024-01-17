@@ -1,0 +1,259 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(igraph)
+```
+
+```{r}
+set.seed(42)
+n <- 1000
+ER <- sample_gnm(n=n, m=1000)
+BA <- barabasi.game(n, 2, directed = FALSE)
+WS <- sample_smallworld(dim=1,size=n, nei=1,p=0.05)
+complete_graph <- make_full_graph(n)
+tree <- make_tree(n, children = 1, mode = "undirected")
+```
+
+
+```{r}
+# Function to simulate SIS model
+
+SISsim <- function(G, beta, gamma, p0 = 0.05, max_steps = 100) {
+  statuses <- numeric(vcount(G))
+  statuses[sample(1:vcount(G), size = round(p0 * vcount(G)))] <- 1  # p0 fraction infected
+  prop_infected <- numeric(max_steps)
+  
+  for (step in 1:max_steps) {
+    for (node in 1:vcount(G)) {
+      if (statuses[node] == 1) {
+        neighbors <- neighbors(G, node)
+        for (neighbor in neighbors) {
+          # Get infected after contact (neighbors)
+          if (statuses[neighbor] == 0 && runif(1) < beta) {
+            statuses[neighbor] <- 1
+          }
+        }
+      # Get recovered
+      if (statuses[node] == 1 && runif(1) < gamma) {
+      statuses[node] <- 0
+      }
+      }
+    }
+    prop_infected[step] <- sum(statuses) / vcount(G)
+    
+  }
+  return(prop_infected[1:step])
+}
+```
+
+```{r}
+p0 <- 0.05
+beta <- 0.6
+gamma <- 0.4
+
+sim_ER <- SISsim(ER, beta, gamma, p0)
+sim_BA <- SISsim(BA, beta, gamma, p0)
+sim_WS <- SISsim(WS, beta, gamma, p0)
+sim_compl <- SISsim(complete_graph, beta, gamma, p0)
+sim_tree <- SISsim(tree, beta, gamma, p0)
+
+png(filename = "task1_plot.png", width = 10 * 100, height = 6 * 100, res = 100) 
+ylim <- c(0, 1.0)
+plot(sim_ER, type = "l", col = "red", xlab = "Time Steps", ylab = "Proportion Infected", main = "ER Network",  ylim = ylim)
+lines(sim_BA, col = "blue")
+lines(sim_WS, col = "green")
+lines(sim_compl, col = "orange")
+lines(sim_tree, col = "yellow")
+legend("topright", legend = c("ER", "BA", "WS", "complete graph", "tree"), col = c("red", "blue", "green", "orange", "yellow"), lty = 1)
+dev.off()
+```
+
+#SIS + vaccination strategy
+
+Greedy algorithm
+
+```{r}
+# Function to perform the greedy algorithm
+greedy_algorithm <- function(G, k) {
+  
+  # Nested function for Monte Carlo simulation
+  monte_carlo_simulation <- function(node, G, num_simulations) {
+    trap_count <- 0
+    for (i in 1:num_simulations) {
+      walk_length <- sample(1:10, 1) # Example: Random walk length between 1 and 10
+      end_node <- simulate_random_walk(node, G, walk_length)
+      if (end_node == node) trap_count <- trap_count + 1
+    }
+    return(trap_count / num_simulations)
+  }
+
+  # Nested function to simulate a random walk from a node
+  simulate_random_walk <- function(node, G, walk_length) {
+    current <- node
+    for (i in 1:walk_length) {
+      neighbors <- neighbors(G, current)
+      if (length(neighbors) == 0) break
+      current <- sample(neighbors, 1)
+    }
+    return(current)
+  }
+
+  S <- vector("list", length = 0) # Set of nodes for traps
+  node_benefits <- numeric(length = vcount(G)) # Store benefits for each node
+  
+  # Compute benefits for each node
+  for (node in V(G)) {
+    print(node)
+    node_benefits[node] <- monte_carlo_simulation(node, G, num_simulations = 100) #Set parameters
+  }
+  
+  # Sort nodes by their benefits and select the top k nodes
+  top_nodes <- order(node_benefits, decreasing = TRUE)[1:k]
+  S <- V(G)[top_nodes]
+
+  return(S)
+}
+```
+
+Rest of algorithms
+
+```{r}
+# Function to calculate PageRank
+calculate_pagerank <- function(G, p) {
+  return(page_rank(G, damping = p)$vector)
+}
+
+# Function to calculate Eigenvector Centrality
+calculate_eigenvector_centrality <- function(G) {
+  return(eigen_centrality(G)$vector)
+}
+
+# Function to calculate Betweenness Centrality
+calculate_betweenness_centrality <- function(G) {
+  return(betweenness(G))
+}
+```
+
+```{r}
+# Extended SIS simulation function with vaccination strategy
+SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  p0 = 0.05, max_steps = 100, num_vaccinated = round(0.1 * vcount(G))) {
+  statuses <- numeric(vcount(G))
+  statuses[sample(1:vcount(G), size = round(p0 * vcount(G)))] <- 1  # p0 fraction infected
+  prop_infected <- numeric(max_steps)
+
+  if(vaccination_strategy == "greedy"){
+    
+     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
+    
+    
+  } else {
+    # Calculate vaccination scores based on the chosen strategy
+    vaccination_scores <- switch(
+      vaccination_strategy,
+      "degree" = degree(G),
+      "pagerank" = calculate_pagerank(G, p = 0.15),  # You can adjust the preference parameter
+      "eigenvector" = calculate_eigenvector_centrality(G),
+      "betweenness" = calculate_betweenness_centrality(G),
+      "random" = runif(vcount(G))  # Random vaccination
+    )
+  
+    # Sort nodes by vaccination score in descending order
+    sorted_nodes <- order(-vaccination_scores)
+  
+    # Select a fraction of nodes for vaccination
+    vaccinated_nodes <- sorted_nodes[1:round(0.1 * vcount(G))]
+  }
+
+  # Apply vaccination
+  statuses[vaccinated_nodes] <- 0
+
+  for (step in 1:max_steps) {
+    for (node in 1:vcount(G)) {
+      if (statuses[node] == 1) {
+        neighbors <- neighbors(G, node)
+        for (neighbor in neighbors) {
+          # Get infected after contact (neighbors)
+          if (statuses[neighbor] == 0 && runif(1) < beta) {
+            statuses[neighbor] <- 1
+          }
+        }
+        # Get recovered
+        if (statuses[node] == 1 && runif(1) < gamma) {
+          statuses[node] <- 0
+        }
+      }
+    }
+    prop_infected[step] <- sum(statuses) / vcount(G)
+  }
+  return(prop_infected[1:step])
+}
+
+```
+
+```{r}
+# Example usage with different vaccination strategies
+set.seed(42)
+n <- 1000
+ER <- sample_gnm(n = n, m = 1000)
+
+p0 <- 0.05
+beta <- 0.6
+gamma <- 0.4
+
+vaccination_strategies <- c("degree", "pagerank", "eigenvector", "betweenness", "random")
+
+# Set up multiple plots in a grid
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(ER, beta, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy:", strategy))
+}
+
+```
+
+```{r}
+networks <- c("ER", "BA", "WS", "complete_graph", "tree")
+vaccination_strategies <- c("degree", "pagerank", "eigenvector", "betweenness", "random")
+
+
+# Set up multiple plots in a grid
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(ER, beta, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in ER:", strategy))
+} 
+
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(BA, beta, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in BA:", strategy))
+} 
+
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(tree, WS, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in WS:", strategy))
+} 
+
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(complete_graph, beta, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in complete_graph:", strategy))
+} 
+
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+for (strategy in vaccination_strategies) {
+  sim_result <- SISsim_vaccination(tree, beta, gamma, vaccination_strategy = strategy, p0)
+  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in tree:", strategy))
+} 
+
+```
+
+
+
