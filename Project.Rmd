@@ -163,7 +163,6 @@ greedy_algorithm <- function(G, b = round(0.1 * vcount(G)), max_walk_length = 10
   
   # Compute benefits for each node
   for (node in V(G)) {
-    print(node)
     node_benefits[node] <- monte_carlo_simulation(node, G, max_walk_length, num_simulations = 100) #Set parameters
   }
   
@@ -406,7 +405,7 @@ Simulations
 
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree","GR_QC", "HEP_TH", "Facebook", "Deezer", "EmailEnron")
 networks <- list(ER, BA, WS, complete_graph, tree,GR_QC,HEP_TH, Facebook, Deezer,EmailEnron)
-vaccination_strategies <- c("degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random", "greedy")
+vaccination_strategies <- c("greedy","degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
 
 ```
 
@@ -417,7 +416,7 @@ vaccination_strategies <- c("degree", "pagerank", "P_pagerank", "eigenvector", "
 
 get_vaccinated_nodes <- function(G, vaccination_strategy){
   if(vaccination_strategy == "greedy"){
-     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
+     vaccinated_nodes <- greedy_algorithm(G)
     
   } else {
     # Calculate vaccination scores based on the chosen strategy
@@ -461,15 +460,14 @@ for (i in 1:length(networks)) {
   }
 }
 
-
 ```
-
 
 SIS with vaccination strategy (using S):
 
 ```{r}
-random_walk_infection <- function(G, start_node, L, statuses, S) {
+random_walk_infection <- function(G, start_node,statuses, S, alpha) {
     current_node <- start_node
+    walk_lengh =  rgeom(1, prob = alpha) + 1 # verificar si no falla
     for (i in 1:L) {
         # Move to a random neighbor
         neighbors <- neighbors(G, current_node)
@@ -485,13 +483,7 @@ random_walk_infection <- function(G, start_node, L, statuses, S) {
     return(statuses)
 }
 
-simulate_crawlers <- function(G, S, L) {
-    statuses <- rep(0, vcount(G))  # Initialize statuses to 0
-    for (node in S) {
-        statuses <- random_walk_infection(G, node, L, statuses, S)
-    }
-    return(statuses)
-}
+
 
 # Function to select set S from graph G
 select_nodes <- function(G, S_size, case_type) {
@@ -510,7 +502,7 @@ select_nodes <- function(G, S_size, case_type) {
 
 ```{r}
 # Extended SIS simulation function with vaccination strategy
-SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file,  L = 10, S_size = 10, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1") {
+SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1", alpha = 0.1, S_size = 10) {
   
   #Output initialization
   prop_infected <- numeric(max_steps)
@@ -523,7 +515,7 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file,  L = 10, S_size 
   
   # Infect the nodes
   for (node in S) {
-        statuses <- random_walk_infection(G, node, L, statuses, S)
+        statuses <- random_walk_infection(G, node, statuses, S, alpha)
     }
 
   # Apply vaccination
@@ -563,10 +555,71 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file,  L = 10, S_size 
 ```
 
 
+# Case 1
+
 ```{r}
+network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
+networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
+vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
+alphas <- c(0.1, 0.3)
+beta <- 0.6
+gamma <- 0.4 
+
+
+for (network_idx in 1:length(networks)) {
+    G <- networks[[network_idx]]
+    network_name <- network_names[network_idx]
+
+    for (vaccination_strategy in vaccination_strategies) {
+        vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+
+        for (num_vaccinated in seq(2, 10, by = 2)) {
+            for (alpha in alphas) {
+              
+               S_size <- round(0.1 * vcount(G)) #no estoy seguro
+              
+               res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
+                                         num_vaccinated = num_vaccinated, case_type = "case1", alpha = alpha, S_size = S_size)
+               out_filename = paste("sim/c1_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_",alpha, ".csv", sep="")
+               result_df <- data.frame(res$prop_infected, res$num_infected)
+               write.csv(result_df, file = out_filename, row.names = FALSE)
+            }
+        }
+    }
+}
 
 ```
 
 
+# Case 2
 
+```{r}
+network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
+networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
+vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
+alpha <- 0.1
+beta <- 0.6
+gamma <- 0.4 
+
+
+for (network_idx in 1:length(networks)) {
+    G <- networks[[network_idx]]
+    network_name <- network_names[network_idx]
+
+    for (vaccination_strategy in vaccination_strategies) {
+        vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+
+        for (num_vaccinated in c(4,8)) {
+             S_size <- round(0.1 * vcount(G)) #no estoy seguro
+            
+             res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
+                                       num_vaccinated = num_vaccinated, case_type = "case2", alpha = alpha, S_size = S_size)
+             out_filename = paste("sim/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_",alpha, ".csv", sep="")
+             result_df <- data.frame(res$prop_infected, res$num_infected)
+             write.csv(result_df, file = out_filename, row.names = FALSE)
+            
+        }
+    }
+}
+```
 
