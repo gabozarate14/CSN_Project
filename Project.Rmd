@@ -451,6 +451,7 @@ for (i in 1:length(networks)) {
   network_name <- network_names[i]
   
   for (vaccination_strategy in vaccination_strategies) {
+    print(paste("Generating: ", network_name,"-",vaccination_strategy))
     vaccinated_nodes <- get_vaccinated_nodes(G, vaccination_strategy)
     node_ids <- as.numeric(V(G)[vaccinated_nodes])
     df <- data.frame(node_ids)
@@ -459,6 +460,8 @@ for (i in 1:length(networks)) {
     write.csv(df, file = filename, row.names = FALSE)
   }
 }
+
+
 ```
 
 
