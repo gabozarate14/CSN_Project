@@ -557,6 +557,16 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100,
 # Case 1
 
 ```{r}
+# Function to calculate the average of a list of numeric vectors
+average_vector_list <- function(list_of_vectors) {
+    sum_vector <- Reduce(`+`, list_of_vectors)
+    avg_vector <- sum_vector / length(list_of_vectors)
+    return(avg_vector)
+}
+```
+
+
+```{r}
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
@@ -576,22 +586,22 @@ for (network_idx in 1:length(networks)) {
             for (alpha in alphas) {
               
                S_size <- round(0.1 * vcount(G)) #no estoy seguro
-               avg_prop_infected <- numeric(0)
-               avg_num_infected <- numeric(0)
+               
+               avg_prop_infected_list <- list()
+               avg_num_infected_list <- list()
 
                # Execute SISsim_vaccination 5 times
                for (sim_run in 1:5) {
                    res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
                                              num_vaccinated = num_vaccinated, case_type = "case1", alpha = alpha, S_size = S_size)
-                    
                    # Accumulate results for averaging
-                   avg_prop_infected <- avg_prop_infected + res$prop_infected
-                   avg_num_infected <- avg_num_infected + res$num_infected
+                   avg_prop_infected_list[[sim_run]] <- res$prop_infected
+                  avg_num_infected_list[[sim_run]] <- res$num_infected
                }
-
+  
                # Average the results
-               avg_prop_infected <- avg_prop_infected / 5
-               avg_num_infected <- avg_num_infected / 5
+               avg_prop_infected <- average_vector_list(avg_prop_infected_list)
+               avg_num_infected <- average_vector_list(avg_num_infected_list)
                
                out_filename = paste("sim/c1_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_",alpha, ".csv", sep="")
                result_df <- data.frame(avg_prop_infected, avg_num_infected)
@@ -608,6 +618,9 @@ for (network_idx in 1:length(networks)) {
 
 # Figure 4
 ```{r}
+
+case_type = "case2"
+
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
@@ -625,26 +638,31 @@ for (network_idx in 1:length(networks)) {
 
         for (num_vaccinated in c(4,8)) {
           
-             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"fig4.csv", sep="")
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
+             
+             if (file.exists(out_filename)) {
+                  # If the file exists, skip to the next iteration
+                  next
+              }
              print(paste("Generating: ",out_filename))
              
              S_size <- round(0.1 * vcount(G)) #no estoy seguro
             
-             avg_prop_infected <- numeric(0)
-             avg_num_infected <- numeric(0)
+             avg_prop_infected_list <- list()
+             avg_num_infected_list <- list()
 
              # Execute SISsim_vaccination 5 times
              for (sim_run in 1:5) {
                  res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
-                                             num_vaccinated = num_vaccinated, case_type = "case1", alpha = alpha, S_size = S_size)
+                                             num_vaccinated = num_vaccinated, case_type = case_type, alpha = alpha, S_size = S_size)
                  # Accumulate results for averaging
-                 avg_prop_infected <- avg_prop_infected + res$prop_infected
-                 avg_num_infected <- avg_num_infected + res$num_infected
+                 avg_prop_infected_list[[sim_run]] <- res$prop_infected
+                  avg_num_infected_list[[sim_run]] <- res$num_infected
              }
 
              # Average the results
-             avg_prop_infected <- avg_prop_infected / 5
-             avg_num_infected <- avg_num_infected / 5
+             avg_prop_infected <- average_vector_list(avg_prop_infected_list)
+             avg_num_infected <- average_vector_list(avg_num_infected_list)
              
              
              result_df <- data.frame(avg_prop_infected, avg_num_infected)
@@ -653,4 +671,123 @@ for (network_idx in 1:length(networks)) {
     }
 }
 ```
+
+
+# Figure 6
+```{r}
+network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
+networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
+S_prop <- c(0.1,0.1,0.1,0.1,0.1,0.1,0.05)
+vaccination_strategies <- c("greedy", "P_pagerank")
+alpha <- 0.1
+beta <- 0.6
+gamma <- 0.4 
+
+
+for (network_idx in 1:length(networks)) {
+    G <- networks[[network_idx]]
+    network_name <- network_names[network_idx]
+
+    for (vaccination_strategy in vaccination_strategies) {
+        vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+
+        for (num_vaccinated in c(40,80)) {
+          
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f6.csv", sep="")
+             
+             if (file.exists(out_filename)) {
+                  # If the file exists, skip to the next iteration
+                  next
+              }
+             print(paste("Generating: ",out_filename))
+             
+             S_size <- round(S_prop[i] * vcount(G)) #no estoy seguro
+            
+             avg_prop_infected_list <- list()
+             avg_num_infected_list <- list()
+
+             # Execute SISsim_vaccination 5 times
+             for (sim_run in 1:5) {
+                 res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
+                                             num_vaccinated = num_vaccinated, case_type = case_type, alpha = alpha, S_size = S_size)
+                 # Accumulate results for averaging
+                 # Append results to the lists
+                  avg_prop_infected_list[[sim_run]] <- res$prop_infected
+                  avg_num_infected_list[[sim_run]] <- res$num_infected
+             }
+
+             # Average the results
+             avg_prop_infected <- average_vector_list(avg_prop_infected_list)
+             avg_num_infected <- average_vector_list(avg_num_infected_list)
+             
+             
+             result_df <- data.frame(avg_prop_infected, avg_num_infected)
+             write.csv(result_df, file = out_filename, row.names = FALSE)
+        }
+    }
+}
+```
+
+
+# Figure 7
+```{r}
+network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
+networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
+S_prop <- c(0.1,0.1,0.1,0.1,0.1,0.1,0.05)
+vaccination_strategies <- c("greedy")
+alpha <- 0.1
+beta <- 0.6
+gamma <- 0.4 
+
+
+for (network_idx in 1:length(networks)) {
+    G <- networks[[network_idx]]
+    network_name <- network_names[network_idx]
+
+    for (vaccination_strategy in vaccination_strategies) {
+        vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+
+        for (num_vaccinated in c(0,20,60,100)) {
+          
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f7.csv", sep="")
+             
+             if (file.exists(out_filename)) {
+                  # If the file exists, skip to the next iteration
+                  next
+              }
+             print(paste("Generating: ",out_filename))
+             
+             S_size <- round(S_prop[i] * vcount(G)) #no estoy seguro
+            
+             avg_prop_infected_list <- list()
+             avg_num_infected_list <- list()
+
+             # Execute SISsim_vaccination 5 times
+             for (sim_run in 1:5) {
+                 res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 100, 
+                                             num_vaccinated = num_vaccinated, case_type = case_type, alpha = alpha, S_size = S_size)
+                 # Accumulate results for averaging
+                 avg_prop_infected_list[[sim_run]] <- res$prop_infected
+                  avg_num_infected_list[[sim_run]] <- res$num_infected
+             }
+
+             # Average the results
+             avg_prop_infected <- average_vector_list(avg_prop_infected_list)
+             avg_num_infected <- average_vector_list(avg_num_infected_list)
+             
+             
+             result_df <- data.frame(avg_prop_infected, avg_num_infected)
+             write.csv(result_df, file = out_filename, row.names = FALSE)
+        }
+    }
+}
+```
+
+
+
+
+
+
+
+
 
