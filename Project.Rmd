@@ -63,72 +63,6 @@ G <- graph_from_data_frame(edge_list, directed=TRUE, vertices=NULL)
 EmailEnron <- simplify(G, remove.multiple = TRUE, remove.loops = TRUE)
 ```
 
-
-Parameters:
-
-```{r}
-p0 <- 0.05
-beta <- 0.6
-gamma <- 0.4
-```
-
-SIS model:
-
-```{r}
-# Function to simulate SIS model
-
-SISsim <- function(G, beta, gamma, p0, max_steps = 100) {
-  statuses <- numeric(vcount(G))
-  statuses[sample(1:vcount(G), size = round(p0 * vcount(G)))] <- 1  # p0 fraction infected
-  prop_infected <- numeric(max_steps)
-  
-  for (step in 1:max_steps) {
-    for (node in 1:vcount(G)) {
-      if (statuses[node] == 1) {
-        neighbors <- neighbors(G, node)
-        for (neighbor in neighbors) {
-          # Get infected after contact (neighbors)
-          if (statuses[neighbor] == 0 && runif(1) < beta) {
-            statuses[neighbor] <- 1
-          }
-        }
-      # Get recovered
-      if (statuses[node] == 1 && runif(1) < gamma) {
-      statuses[node] <- 0
-      }
-      }
-    }
-    prop_infected[step] <- sum(statuses) / vcount(G)
-    
-  }
-  return(prop_infected[1:step])
-}
-```
-
-#Plots of the SIS model
-
-```{r}
-sim_ER <- SISsim(ER, beta, gamma, p0)
-sim_BA <- SISsim(BA, beta, gamma, p0)
-sim_WS <- SISsim(WS, beta, gamma, p0)
-sim_compl <- SISsim(complete_graph, beta, gamma, p0)
-sim_tree <- SISsim(tree, beta, gamma, p0)
-
-png(filename = "task1_plot.png", width = 10 * 100, height = 6 * 100, res = 100) 
-ylim <- c(0, 1.0)
-plot(sim_ER, type = "l", col = "red", xlab = "Time Steps", ylab = "Proportion Infected", main = "ER Network",  ylim = ylim)
-lines(sim_BA, col = "blue")
-lines(sim_WS, col = "green")
-lines(sim_compl, col = "orange")
-lines(sim_tree, col = "yellow")
-legend("topright", legend = c("ER", "BA", "WS", "complete graph", "tree"), col = c("red", "blue", "green", "orange", "yellow"), lty = 1)
-dev.off()
-```
-
-Falta añadir las networks del paper en el plot (cuando las tengamos todas).
-Y hacer el plot para cada una de las strategies.
-
-
 SIS + vaccination strategy:
 
 #Greedy strategy
@@ -197,207 +131,6 @@ calculate_betweenness_centrality <- function(G) {
   return(betweenness(G))
 }
 ```
-
-SIS with vaccination strategy:
-
-```{r}
-# Extended SIS simulation function with vaccination strategy
-SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  p0, max_steps = 100, num_vaccinated = round(0.1 * vcount(G))) {
-  
-  num_vaccinated = round(0.1 * vcount(G))
-  
-  statuses <- numeric(vcount(G))
-  statuses[sample(1:vcount(G), size = round(p0 * vcount(G)))] <- 1  # p0 fraction infected
-  
-  #Outputs
-  prop_infected <- numeric(max_steps)
-  num_infected <- numeric(max_steps)
-
-
-  if(vaccination_strategy == "greedy"){
-     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
-    
-  } else {
-    # Calculate vaccination scores based on the chosen strategy
-    vaccination_scores <- switch(
-      vaccination_strategy,
-      "degree" = degree(G),
-      "pagerank" = calculate_pagerank(G),
-      "P_pagerank" = calculate_P_pagerank(G, p = 0.15),  # You can adjust the preference parameter
-      "eigenvector" = calculate_eigenvector_centrality(G),
-      "betweenness" = calculate_betweenness_centrality(G),
-      "random" = runif(vcount(G)),  # Random vaccination
-      "greedy" = greedy_algorithm(G, b = 0.1 * vcount(G))
-    )
-  
-    # Sort nodes by vaccination score in descending order
-    sorted_nodes <- order(-vaccination_scores)
-  
-    # Select a fraction of nodes for vaccination
-    vaccinated_nodes <- sorted_nodes[1:round(0.1 * vcount(G))]
-  }
-
-  # Apply vaccination
-  statuses[vaccinated_nodes] <- 0
-
-  for (step in 1:max_steps) {
-    for (node in 1:vcount(G)) {
-      if (statuses[node] == 1) {
-        neighbors <- neighbors(G, node)
-        for (neighbor in neighbors) {
-          # Get infected after contact (neighbors)
-          if (statuses[neighbor] == 0 && runif(1) < beta) {
-            statuses[neighbor] <- 1
-          }
-        }
-        # Get recovered
-        if (statuses[node] == 1 && runif(1) < gamma) {
-          statuses[node] <- 0
-        }
-      }
-    }
-    
-    num_infected[step] <- sum(statuses)
-    prop_infected[step] <- sum(statuses) / vcount(G)
-  }
-  
-  return(list(num_infected = num_infected, prop_infected = prop_infected[1:step]))
-}
-```
-
-
-```{r}
-vaccination_strategy <- "degree"
-
-sim_vac_ER <- SISsim_vaccination(ER, beta, gamma, vaccination_strategy, p0)
-sim_vac_BA <- SISsim_vaccination(BA, beta, gamma, vaccination_strategy, p0)
-sim_vac_WS <- SISsim_vaccination(WS, beta, gamma, vaccination_strategy, p0)
-sim_vac_compl <- SISsim_vaccination(complete_graph, beta, gamma, vaccination_strategy, p0)
-sim_vac_tree <- SISsim_vaccination(tree, beta, gamma, vaccination_strategy, p0)
-
-png(filename = "plots/task1_vac_plot.png", width = 10 * 100, height = 6 * 100, res = 100) 
-ylim <- c(0, 1.0)
-plot(sim_vac_ER, type = "l", col = "red", xlab = "Time Steps", ylab = "Proportion Infected", main = "ER Network")
-lines(sim_vac_BA, col = "blue")
-lines(sim_vac_WS, col = "green")
-lines(sim_vac_compl, col = "orange")
-lines(sim_vac_tree, col = "yellow")
-legend("topright", legend = c("ER", "BA", "WS", "complete graph", "tree"), col = c("red", "blue", "green", "orange", "yellow"), lty = 1)
-dev.off()
-```
-
-Falta añadir las networks del paper en el plot (cuando las tengamos todas).
-Y hacer el plot para cada una de las strategies.
-
-#Plot of different strategies on networks.  (proportion of infected over time)
-```{r}
-networks <- c("ER", "BA", "WS", "complete_graph", "tree")
-vaccination_strategies <- c("degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
-
-
-# Set up multiple plots in a grid
-par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
-
-for (strategy in vaccination_strategies) {
-  sim_result <- SISsim_vaccination(ER, beta, gamma, vaccination_strategy = strategy, p0)
-  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in ER:", strategy))
-} 
-
-par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
-for (strategy in vaccination_strategies) {
-  sim_result <- SISsim_vaccination(BA, beta, gamma, vaccination_strategy = strategy, p0)
-  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in BA:", strategy))
-} 
-
-par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
-for (strategy in vaccination_strategies) {
-  sim_result <- SISsim_vaccination(tree, WS, gamma, vaccination_strategy = strategy, p0)
-  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in WS:", strategy))
-} 
-
-par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
-for (strategy in vaccination_strategies) {
-  sim_result <- SISsim_vaccination(complete_graph, beta, gamma, vaccination_strategy = strategy, p0)
-  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in complete_graph:", strategy))
-} 
-
-par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
-for (strategy in vaccination_strategies) {
-  sim_result <- SISsim_vaccination(tree, beta, gamma, vaccination_strategy = strategy, p0)
-  plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("Vaccination Strategy in tree:", strategy))
-} 
-
-```
-
-#Plot of the greedy strategy on a network (proportion of infected over time)
-```{r}
-vaccination_strategy <- "greedy"
-sim_result <- SISsim_vaccination(ER, beta, gamma, vaccination_strategy, p0)
-
-# Plot the results
-plot(sim_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Proportion Infected", main = paste("SIS with Vaccination - ER Graph (", vaccination_strategy, ")"))
-```
-
-
-```{r}
-# Function to run multiple SIS simulations and return the average number of infected individuals at each time step
-average_SIS_simulations <- function(G, beta, gamma, vaccination_strategy, p0 = 0.05, max_steps = 100, num_simulations = 7, num_vaccinated = round(0.1 * vcount(G))) {
-  avg_infected <- numeric(0)
-
-  num_simulations<-7
-  
-  for (sim in 1:num_simulations) {
-    
-    res <- SISsim_vaccination(G, beta, gamma, vaccination_strategy, p0, max_steps, num_vaccinated)
-    num_infected_result <- res$num_infected
-    avg_infected <- avg_infected + num_infected_result
-  }
-
-  avg_infected <- avg_infected / num_simulations
-  return(avg_infected)
-}
-```
-
-
-```{r}
-avg_infected_result <- average_SIS_simulations(ER, beta, gamma, vaccination_strategy, p0)
-
-# Plot the results
-plot(avg_infected_result, type = "l", col = "blue", xlab = "Time Steps", ylab = "Expected Number of Infected Individuals", main = paste("SIS with Vaccination - ER Graph (", vaccination_strategy, ")"))
-```
-
-```{r}
-vaccination_strategy <- "degree"
-
-avg_infected_result_RE <- average_SIS_simulations(ER, beta, gamma, vaccination_strategy, p0)
-avg_infected_result_BA <- average_SIS_simulations(BA, beta, gamma, vaccination_strategy, p0)
-avg_infected_result_WS <- average_SIS_simulations(WS, beta, gamma, vaccination_strategy, p0)
-avg_infected_result_compl <- average_SIS_simulations(complete_graph, beta, gamma, vaccination_strategy, p0)
-avg_infected_result_tree <- average_SIS_simulations(tree, beta, gamma, vaccination_strategy, p0)
-
-
-png(filename = "avg_vac_plot.png", width = 10 * 100, height = 6 * 100, res = 100) 
-ylim <- c(0, 1.0)
-plot(avg_infected_result_RE, type = "l", col = "red", xlab = "Time Steps", ylab = "Expected Number of Infected Individuals", main = "ER Network")
-lines(avg_infected_result_BA, col = "blue")
-lines(avg_infected_result_WS, col = "green")
-lines(avg_infected_result_compl, col = "orange")
-lines(avg_infected_result_tree, col = "yellow")
-legend("topright", legend = c("ER", "BA", "WS", "complete graph", "tree"), col = c("red", "blue", "green", "orange", "yellow"), lty = 1)
-dev.off()
-```
-
-Falta añadir las networks del paper en el plot (cuando las tengamos todas).
-Y hacer el plot para cada una de las strategies.
-
-
-Falta pero no me ha dado tiempo ahora:
-Ejecutar los tres plots con colores. (falla el y_lim, añadirlo)
-Cambiar el nombre de la funcion sis_vac que calcula el expected en vez del proportion.
-Cambiar que los plots se impriman aqui en vez de en un fichero.
-
-Hacer plots del paper.
-
 
 Simulations
 
@@ -484,7 +217,6 @@ random_walk_infection <- function(G, start_node,statuses, S, alpha) {
 }
 
 
-
 # Function to select set S from graph G
 select_nodes <- function(G, S_size, case_type) {
   if (case_type == "case1") {
@@ -557,6 +289,13 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100,
 # Case 1
 
 ```{r}
+# Create the 'sim' directory if it doesn't exist
+if (!file.exists("sim")) {
+  dir.create("sim")
+}
+```
+
+```{r}
 # Function to calculate the average of a list of numeric vectors
 average_vector_list <- function(list_of_vectors) {
     sum_vector <- Reduce(`+`, list_of_vectors)
@@ -565,11 +304,10 @@ average_vector_list <- function(list_of_vectors) {
 }
 ```
 
-
 ```{r}
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
-vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
+vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
 alphas <- c(0.1, 0.3)
 beta <- 0.6
 gamma <- 0.4 
@@ -585,7 +323,7 @@ for (network_idx in 1:length(networks)) {
         for (num_vaccinated in seq(4, 20, by = 4)) {
             for (alpha in alphas) {
               
-               S_size <- round(0.1 * vcount(G)) #no estoy seguro
+               S_size <- round(0.1 * vcount(G)) 
                
                avg_prop_infected_list <- list()
                avg_num_infected_list <- list()
@@ -623,7 +361,7 @@ case_type = "case2"
 
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
-vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random")
+vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
 alpha <- 0.1
 beta <- 0.6
 gamma <- 0.4 
@@ -675,6 +413,7 @@ for (network_idx in 1:length(networks)) {
 
 # Figure 6
 ```{r}
+case_type = "case2"
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 S_prop <- c(0.1,0.1,0.1,0.1,0.1,0.1,0.05)
@@ -731,6 +470,7 @@ for (network_idx in 1:length(networks)) {
 
 # Figure 7
 ```{r}
+case_type = "case2"
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 S_prop <- c(0.1,0.1,0.1,0.1,0.1,0.1,0.05)
@@ -782,6 +522,59 @@ for (network_idx in 1:length(networks)) {
     }
 }
 ```
+
+
+```{r}
+case_type = "case2"
+network_names <- c("BA")
+networks <- list(ER, BA, WS, complete_graph, tree)
+S_prop <- c(0.1,0.1,0.1,0.1,0.1)
+vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
+alpha <- 0.1
+beta <- 0.6
+gamma <- 0.4 
+num_vaccinated <- 80
+
+for (network_idx in 1:length(networks)) {
+    G <- networks[[network_idx]]
+    network_name <- network_names[network_idx]
+
+    for (vaccination_strategy in vaccination_strategies) {
+        vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_s10000.csv", sep="")
+             
+             if (file.exists(out_filename)) {
+                  # If the file exists, skip to the next iteration
+                  next
+              }
+             print(paste("Generating: ",out_filename))
+             
+             S_size <- round(S_prop[i] * vcount(G)) #no estoy seguro
+            
+             avg_prop_infected_list <- list()
+             avg_num_infected_list <- list()
+
+             # Execute SISsim_vaccination 5 times
+             for (sim_run in 1:3) {
+                 res <- SISsim_vaccination(G, beta, gamma, vacc_nodes_file, max_steps = 10000, 
+                                             num_vaccinated = num_vaccinated, case_type = case_type, alpha = alpha, S_size = S_size)
+                 # Accumulate results for averaging
+                 avg_prop_infected_list[[sim_run]] <- res$prop_infected
+                  avg_num_infected_list[[sim_run]] <- res$num_infected
+             }
+
+             # Average the results
+             avg_prop_infected <- average_vector_list(avg_prop_infected_list)
+             avg_num_infected <- average_vector_list(avg_num_infected_list)
+             
+             
+             result_df <- data.frame(avg_prop_infected, avg_num_infected)
+             write.csv(result_df, file = out_filename, row.names = FALSE)
+    }
+}
+```
+
 
 
 
