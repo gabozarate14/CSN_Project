@@ -168,7 +168,7 @@ greedy_algorithm <- function(G, b = round(0.1 * vcount(G)), max_walk_length = 10
   }
   
   # Sort nodes by their benefits and select the top b nodes
-  top_nodes <- order(node_benefits, decreasing = TRUE)[1:b]
+  top_nodes <- order(node_benefits, decreasing = TRUE)
   S <- V(G)[top_nodes]
 
   return(S)
@@ -400,6 +400,68 @@ Cambiar que los plots se impriman aqui en vez de en un fichero.
 Hacer plots del paper.
 
 
+Simulations
+
+```{r}
+
+network_names <- c("ER", "BA", "WS", "complete_graph", "tree","GR_QC", "HEP_TH", "Facebook", "Deezer", "EmailEnron")
+networks <- list(ER, BA, WS, complete_graph, tree,GR_QC,HEP_TH, Facebook, Deezer,EmailEnron)
+vaccination_strategies <- c("degree", "pagerank", "P_pagerank", "eigenvector", "betweenness", "random", "greedy")
+
+```
+
+
+# Generate the selected vaccinated nodes
+
+```{r}
+
+get_vaccinated_nodes <- function(G, vaccination_strategy){
+  if(vaccination_strategy == "greedy"){
+     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
+    
+  } else {
+    # Calculate vaccination scores based on the chosen strategy
+    vaccination_scores <- switch(
+      vaccination_strategy,
+      "degree" = degree(G),
+      "pagerank" = calculate_pagerank(G),
+      "P_pagerank" = calculate_P_pagerank(G, p = 0.15),  # You can adjust the preference parameter
+      "eigenvector" = calculate_eigenvector_centrality(G),
+      "betweenness" = calculate_betweenness_centrality(G),
+      "random" = runif(vcount(G)),  # Random vaccination
+      "greedy" = greedy_algorithm(G, b = 0.1 * vcount(G))
+    )
+  
+    # Sort nodes by vaccination score in descending order
+    sorted_nodes <- order(-vaccination_scores)
+  
+    # Select a fraction of nodes for vaccination
+    vaccinated_nodes <- sorted_nodes[1:round(0.1 * vcount(G))]
+  }
+  return(vaccinated_nodes)
+}
+
+```
+
+
+```{r}
+
+for (i in 1:length(networks)) {
+  G <- networks[[i]]
+  network_name <- network_names[i]
+  
+  for (vaccination_strategy in vaccination_strategies) {
+    vaccinated_nodes <- get_vaccinated_nodes(G, vaccination_strategy)
+    node_ids <- as.numeric(V(G)[vaccinated_nodes])
+    df <- data.frame(node_ids)
+    filename <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
+    
+    write.csv(df, file = filename, row.names = FALSE)
+  }
+}
+```
+
+
 SIS with vaccination strategy (using S):
 
 ```{r}
@@ -445,7 +507,7 @@ select_nodes <- function(G, S_size, case_type) {
 
 ```{r}
 # Extended SIS simulation function with vaccination strategy
-SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  L = 10, S_size = 10, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1") {
+SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file,  L = 10, S_size = 10, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1") {
   
   #Output initialization
   prop_infected <- numeric(max_steps)
@@ -454,38 +516,22 @@ SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  L = 10, S_
   # Choose S depending on the case being analyzed
   S <- select_nodes(G, S_size, case_type)
   statuses <- numeric(vcount(G))
+  S_ids <- as.numeric(V(G)[S])
   
   # Infect the nodes
   for (node in S) {
         statuses <- random_walk_infection(G, node, L, statuses, S)
     }
 
-  
-  # Vacination
-  if(vaccination_strategy == "greedy"){
-     vaccinated_nodes <- greedy_algorithm(G, num_vaccinated)
-    
-  } else {
-    # Calculate vaccination scores based on the chosen strategy
-    vaccination_scores <- switch(
-      vaccination_strategy,
-      "degree" = degree(G),
-      "pagerank" = calculate_pagerank(G),
-      "P_pagerank" = calculate_P_pagerank(G, p = 0.15),  # You can adjust the preference parameter
-      "eigenvector" = calculate_eigenvector_centrality(G),
-      "betweenness" = calculate_betweenness_centrality(G),
-      "random" = runif(vcount(G)),  # Random vaccination
-      "greedy" = greedy_algorithm(G, b = 0.1 * vcount(G))
-    )
-  
-    # Sort nodes by vaccination score in descending order
-    sorted_nodes <- order(-vaccination_scores)
-  
-    # Select a fraction of nodes for vaccination
-    vaccinated_nodes <- sorted_nodes[1:round(0.1 * vcount(G))]
-  }
-
   # Apply vaccination
+  nodes_df <- read.csv(vacc_nodes_file, sep="\t", header=FALSE, skip=1)
+  vaccinated_nodes <- nodes_df[, 1] 
+  vaccinated_nodes<- na.omit(vaccinated_nodes[1:num_vaccinated])
+  
+  vaccinated_nodes<-setdiff(vaccinated_nodes, S_ids)
+  
+  statuses[vaccinated_nodes] <- 0
+  
   statuses[vaccinated_nodes] <- 0
 
   for (step in 1:max_steps) {
@@ -513,6 +559,10 @@ SISsim_vaccination <- function(G, beta, gamma, vaccination_strategy,  L = 10, S_
 }
 ```
 
+
+```{r}
+
+```
 
 
 
