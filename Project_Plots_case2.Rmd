@@ -7,26 +7,16 @@ editor_options:
 ---
 
 
-
-```{r}
-
-network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
-b_list <- c(4,8)
-
-vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
-
-```
-
-# Figure 4 replication
+# Simulation 2.1
 
 ```{r}
 print_plot4 <- function(network_name,b){
-  greedy <- read.csv(paste("sim2t/c2_", network_name, "_greedy_",b,"_f4.csv", sep=""))[[1]]
-  degree <- read.csv(paste("sim2t/c2_", network_name, "_degree_",b,"_f4.csv", sep=""))[[1]]
-  pagerank <- read.csv(paste("sim2t/c2_", network_name, "_pagerank_",b,"_f4.csv", sep=""))[[1]]
-  P_pagerank <- read.csv(paste("sim2t/c2_", network_name, "_P_pagerank_",b,"_f4.csv", sep=""))[[1]]
-  eigenvector <- read.csv(paste("sim2t/c2_", network_name, "_eigenvector_",b,"_f4.csv", sep=""))[[1]]
-  betweenness <- read.csv(paste("sim2t/c2_", network_name, "_betweenness_",b,"_f4.csv", sep=""))[[1]]
+  greedy <- read.csv(paste("sim2/c2_", network_name, "_greedy_",b,"_f4.csv", sep=""))[[1]]
+  degree <- read.csv(paste("sim2/c2_", network_name, "_degree_",b,"_f4.csv", sep=""))[[1]]
+  pagerank <- read.csv(paste("sim2/c2_", network_name, "_pagerank_",b,"_f4.csv", sep=""))[[1]]
+  P_pagerank <- read.csv(paste("sim2/c2_", network_name, "_P_pagerank_",b,"_f4.csv", sep=""))[[1]]
+  eigenvector <- read.csv(paste("sim2/c2_", network_name, "_eigenvector_",b,"_f4.csv", sep=""))[[1]]
+  betweenness <- read.csv(paste("sim2/c2_", network_name, "_betweenness_",b,"_f4.csv", sep=""))[[1]]
   
   plotname <- paste(network_name,"with b=",b)
   
@@ -46,9 +36,6 @@ print_plot4 <- function(network_name,b){
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 b_list <- c(4,8)
 
-network <- "ER"
-b<-4
-
 for (network in network_names){
   for (b in b_list){
     print_plot4(network, b)
@@ -57,14 +44,13 @@ for (network in network_names){
 
 ```
 
-
-# Figure 6
+# Simulation 2.2
 
 ```{r}
 print_plot6 <- function(network_name, S_prop){
   
   greedy40 <- read.csv(paste("sim2/c2_", network_name, "_greedy_40_f6.csv", sep=""))[[1]]
-  greedy80 <- read.csv(paste("sim2/c2_", network_name, "_greedy_40_f6.csv", sep=""))[[1]]
+  greedy80 <- read.csv(paste("sim2/c2_", network_name, "_greedy_80_f6.csv", sep=""))[[1]]
   P_pagerank40 <- read.csv(paste("sim2/c2_", network_name, "_P_pagerank_40_f6.csv", sep=""))[[1]]
   P_pagerank80 <- read.csv(paste("sim2/c2_", network_name, "_P_pagerank_80_f6.csv", sep=""))[[1]]
 
@@ -82,7 +68,7 @@ print_plot6 <- function(network_name, S_prop){
 
 
 ```{r}
-network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
+network_names <- c("ER", "BA", "WS", "tree", "GR_QC", "HEP_TH")
 S_prop <- c(0.1,0.1,0.1,0.1,0.1,0.1,0.05)
 
 
@@ -94,7 +80,7 @@ for (i in 1:length(network_names)) {
 ```
 
 
-# Figure 7
+# Simulation 2.3
 
 ```{r}
 print_plot7 <- function(network_name, S_prop){
@@ -108,7 +94,7 @@ print_plot7 <- function(network_name, S_prop){
 
   
   plotname <- paste(network_name,"with |S| = n *",S_prop)
-  ylim <- c(0.5, 1.0)
+  ylim <- c(0, 1.0)
   plot(greedy0, type = "l", col = "red", xlab = "Time Steps", ylab = "Proportion of non Infected", main = plotname, ylim = ylim)
   lines(greedy20, col = "blue")
   lines(greedy40, col = "green")
@@ -130,6 +116,7 @@ for (i in 1:length(network_names)) {
 }
 
 ```
+
 
 
 
