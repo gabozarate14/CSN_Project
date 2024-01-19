@@ -438,7 +438,7 @@ for (network_idx in 1:length(networks)) {
               }
              print(paste("Generating: ",out_filename))
              
-             S_size <- round(0.01 * vcount(G)) #no estoy seguro
+             S_size <- round(0.01 * vcount(G))
             
              avg_prop_infected_list <- list()
              avg_num_infected_list <- list()
@@ -495,7 +495,7 @@ for (network_idx in 1:length(networks)) {
               }
              print(paste("Generating: ",out_filename))
              
-             S_size <- round(S_prop[network_idx] * vcount(G)) #no estoy seguro
+             S_size <- round(S_prop[network_idx] * vcount(G)) 
             
              avg_prop_infected_list <- list()
              avg_num_infected_list <- list()
@@ -543,7 +543,8 @@ for (network_idx in 1:length(networks)) {
     for (vaccination_strategy in vaccination_strategies) {
         vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
 
-        for (num_vaccinated in c(0,20,60,100)) {
+        # for (num_vaccinated in c(0,20,60,100)) {
+        for (num_vaccinated in c(60,100)) {
           
              out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f7.csv", sep="")
              
@@ -553,8 +554,8 @@ for (network_idx in 1:length(networks)) {
               }
              print(paste("Generating: ",out_filename))
              
-             S_size <- round(S_prop[network_idx] * vcount(G)) #no estoy seguro
-            
+             S_size <- round(S_prop[network_idx] * vcount(G)) 
+             
              avg_prop_infected_list <- list()
              avg_num_infected_list <- list()
 

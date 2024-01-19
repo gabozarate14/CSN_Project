@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 
 # Simulation 1.1
 
@@ -70,7 +75,7 @@ print_plot2_num_infected <- function(network_name, b) {
 network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH")
 b_list <- c(4)
 
-network <- "ER"
+network <- "GR_QC"
 b <- 4
 
 for (network in network_names) {
@@ -92,7 +97,7 @@ print_plot3_num_infected <- function(network_name, b) {
   pagerank <- read.csv(paste("sim/c1_", network_name, "_pagerank_", b, "_0.3.csv", sep = ""))[[2]]
   P_pagerank <- read.csv(paste("sim/c1_", network_name, "_P_pagerank_", b, "_0.3.csv", sep = ""))[[2]]
   eigenvector <- read.csv(paste("sim/c1_", network_name, "_eigenvector_", b, "_0.3.csv", sep = ""))[[2]]
-  betweenness <- read.csv(paste("sim/c1_", network_name, "_betweenness_", b, "_0.3.csv", sep = ""))[[2]]
+    betweenness <- read.csv(paste("sim/c1_", network_name, "_betweenness_", b, "_0.3.csv", sep = ""))[[2]]
 
   plotname <- paste(network_name, "with b=", b)
 
@@ -154,8 +159,6 @@ for (i in 1:length(network_names)) {
     print_plot4(network_names[[i]])
 }
 ```
-
-
 
 
 
