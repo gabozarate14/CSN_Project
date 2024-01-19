@@ -266,14 +266,13 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100,
     for (node in 1:vcount(G)) {
       if (statuses[node] == 1) {
         neighbors <- neighbors(G, node)
-        for (neighbor in neighbors) {
-          if (neighbor %in% vaccinated_nodes){
-            next
-          }
-          # Get infected after contact (neighbors)
-          if (statuses[neighbor] == 0 && runif(1) < beta) {
-            statuses[neighbor] <- 1
-          }
+        # Filter out neighbors that are in vaccinated_nodes
+        valid_neighbors <- setdiff(neighbors, vaccinated_nodes)
+        
+        # Randomly select one valid neighbor
+        if (length(valid_neighbors) > 0) {
+            selected_neighbor <- sample(valid_neighbors, 1)
+            statuses[selected_neighbor] <- 1
         }
         # Get recovered
         if (statuses[node] == 1 && runif(1) < gamma) {
@@ -381,7 +380,7 @@ for (network_idx in 1:length(networks)) {
         # for (num_vaccinated in c(4,8)) {
         for (num_vaccinated in c(4)) {
           
-             out_filename = paste("sim2t/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
              
              if (file.exists(out_filename)) {
                   # If the file exists, skip to the next iteration
@@ -437,7 +436,7 @@ for (network_idx in 1:length(networks)) {
 
         for (num_vaccinated in c(40,80)) {
           
-             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f6.csv", sep="")
+             out_filename = paste("sim2t/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f6.csv", sep="")
              
              if (file.exists(out_filename)) {
                   # If the file exists, skip to the next iteration
