@@ -272,7 +272,13 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100,
         # Randomly select one valid neighbor
         if (length(valid_neighbors) > 0) {
             selected_neighbor <- sample(valid_neighbors, 1)
-            statuses[selected_neighbor] <- 1
+            if (selected_neighbor %in% S_ids){
+              next
+            }
+            # Get infected after contact (only for the selected neighbor)
+            if (statuses[selected_neighbor] == 0 && runif(1) < beta) {
+                statuses[selected_neighbor] <- 1
+            }
         }
         # Get recovered
         if (statuses[node] == 1 && runif(1) < gamma) {
@@ -312,7 +318,7 @@ network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH"
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
 alphas <- c(0.1, 0.3)
-beta <- 0.6
+beta <- 0.1
 gamma <- 0.4 
 
 
@@ -366,7 +372,7 @@ network_names <- c("ER", "BA", "WS", "complete_graph", "tree", "GR_QC", "HEP_TH"
 networks <- list(ER, BA, WS, complete_graph, tree, GR_QC, HEP_TH)
 vaccination_strategies <- c("greedy", "degree", "pagerank", "P_pagerank", "eigenvector", "betweenness")
 alpha <- 0.1
-beta <- 0.6
+beta <- 0.1
 gamma <- 0.4 
 
 
@@ -377,8 +383,8 @@ for (network_idx in 1:length(networks)) {
     for (vaccination_strategy in vaccination_strategies) {
         vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
 
-        # for (num_vaccinated in c(4,8)) {
-        for (num_vaccinated in c(4)) {
+        for (num_vaccinated in c(4,8)) {
+        # for (num_vaccinated in c(4)) {
           
              out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
              
@@ -436,7 +442,7 @@ for (network_idx in 1:length(networks)) {
 
         for (num_vaccinated in c(40,80)) {
           
-             out_filename = paste("sim2t/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f6.csv", sep="")
+             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f6.csv", sep="")
              
              if (file.exists(out_filename)) {
                   # If the file exists, skip to the next iteration
