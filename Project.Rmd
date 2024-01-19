@@ -233,6 +233,13 @@ select_nodes <- function(G, S_size, case_type) {
 
 
 ```{r}
+G <- ER
+case_type = "case1"
+S_size <- round(S_prop[i] * vcount(G))
+```
+
+
+```{r}
 # Extended SIS simulation function with vaccination strategy
 SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100, num_vaccinated = round(0.1 * vcount(G)), case_type = "case1", alpha = 0.1, S_size = 10) {
   
@@ -246,26 +253,23 @@ SISsim_vaccination <- function(G, beta, gamma, vacc_nodes_file, max_steps = 100,
   S_ids <- as.numeric(V(G)[S])
   
   # Infect the nodes
-  for (node in S) {
-        statuses <- random_walk_infection(G, node, statuses, S, alpha)
-    }
+  statuses[S_ids] <- 1
 
   # Apply vaccination
   nodes_df <- read.csv(vacc_nodes_file, sep="\t", header=FALSE, skip=1)
   vaccinated_nodes <- nodes_df[, 1] 
   vaccinated_nodes<- na.omit(vaccinated_nodes[1:num_vaccinated])
   
-  vaccinated_nodes<-setdiff(vaccinated_nodes, S_ids)
-  
   statuses[vaccinated_nodes] <- 0
   
-  statuses[vaccinated_nodes] <- 0
-
   for (step in 1:max_steps) {
     for (node in 1:vcount(G)) {
       if (statuses[node] == 1) {
         neighbors <- neighbors(G, node)
         for (neighbor in neighbors) {
+          if (neighbor %in% vaccinated_nodes){
+            next
+          }
           # Get infected after contact (neighbors)
           if (statuses[neighbor] == 0 && runif(1) < beta) {
             statuses[neighbor] <- 1
@@ -374,9 +378,10 @@ for (network_idx in 1:length(networks)) {
     for (vaccination_strategy in vaccination_strategies) {
         vacc_nodes_file <- paste("files/", network_name, "_", vaccination_strategy, ".csv", sep="")
 
-        for (num_vaccinated in c(4,8)) {
+        # for (num_vaccinated in c(4,8)) {
+        for (num_vaccinated in c(4)) {
           
-             out_filename = paste("sim2/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
+             out_filename = paste("sim2t/c2_", network_name, "_", vaccination_strategy,"_",num_vaccinated,"_f4.csv", sep="")
              
              if (file.exists(out_filename)) {
                   # If the file exists, skip to the next iteration
@@ -574,13 +579,3 @@ for (network_idx in 1:length(networks)) {
     }
 }
 ```
-
-
-
-
-
-
-
-
-
-
