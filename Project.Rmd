@@ -134,6 +134,58 @@ calculate_betweenness_centrality <- function(G) {
 
 Simulations
 
+# Get graph statistics
+
+```{r}
+calculate_graph_metrics <- function(network_names, list_of_graphs) {
+  # Check if network_names and list_of_graphs are of the same length
+  if (length(network_names) != length(list_of_graphs)) {
+    stop("The length of network_names and list_of_graphs must be the same")
+  }
+
+  # Initialize an empty dataframe to store the results
+  results <- data.frame(Network_Name = character(),
+                        Number_of_Nodes = integer(),
+                        Number_of_Edges = integer(),
+                        Average_Degree = numeric(),
+                        Diameter = integer(),
+                        stringsAsFactors = FALSE)
+
+  # Iterate over each graph in the list
+  for (i in seq_along(list_of_graphs)) {
+    # Get the current graph
+    graph <- list_of_graphs[[i]]
+    
+    # Calculate metrics
+    num_nodes <- vcount(graph)
+    num_edges <- ecount(graph)
+    avg_degree <- mean(degree(graph))
+    diam <- diameter(graph)
+
+    # Append the metrics and the network name to the dataframe
+    results <- rbind(results, data.frame(Network_Name = network_names[i],
+                                         Number_of_Nodes = num_nodes,
+                                         Number_of_Edges = num_edges,
+                                         Average_Degree = avg_degree,
+                                         Diameter = diam))
+  }
+
+  # Return the dataframe
+  return(results)
+}
+
+```
+
+
+```{r}
+network_names <- c("ER", "BA", "WS", "tree", "GR_QC", "HEP_TH")
+networks <- list(ER, BA, WS, tree, GR_QC, HEP_TH)
+
+graph_metrics <- calculate_graph_metrics(network_names, networks)
+graph_metrics
+```
+
+
 # Generate the selected vaccinated nodes
 
 ```{r}
